@@ -108,6 +108,36 @@ public:
     MeshRenderer()
     {
     }
+    void addPointLights(Shader &shader, const std::vector<Light> &lights, Camera &camera)
+    {
+        shader.use();
+        int nbPointLight = 0;
+        for (auto light : lights)
+        {
+            glm::vec3 position = camera.calculateViewMatrix() * glm::vec4(light.Position, 1.0f);
+            int ligthPosition = glGetUniformLocation(shader.ID, pointLightAttribute("position", nbPointLight).c_str());
+            glUniform3fv(ligthPosition, 1, glm::value_ptr(position));
+
+            int lightAmbient = glGetUniformLocation(shader.ID, pointLightAttribute("ambient", nbPointLight).c_str());
+            glUniform3fv(lightAmbient, 1, glm::value_ptr(light.Ambiant));
+
+            int lightDiffuse = glGetUniformLocation(shader.ID, pointLightAttribute("diffuse", nbPointLight).c_str());
+            glUniform3fv(lightDiffuse, 1, glm::value_ptr(light.Diffuse));
+
+            int lightSpecular = glGetUniformLocation(shader.ID, pointLightAttribute("specular", nbPointLight).c_str());
+            glUniform3fv(lightSpecular, 1, glm::value_ptr(light.Specular));
+
+            int lightDirection = glGetUniformLocation(shader.ID, pointLightAttribute("direction", nbPointLight).c_str());
+            glUniform3fv(lightDirection, 1, glm::value_ptr(light.Direction));
+
+            shader.setFloat(pointLightAttribute("constant", nbPointLight), light.Constant);
+            shader.setFloat(pointLightAttribute("linear", nbPointLight), light.Linear);
+            shader.setFloat(pointLightAttribute("quadratic", nbPointLight), light.Quadratic);
+            ++nbPointLight;
+        }
+
+        shader.setInt("nbPointLight", nbPointLight);
+    }
     void useLight(Shader &shader, const Light &light, Camera &camera)
     {
         shader.use();
@@ -123,7 +153,7 @@ public:
         glUniform3fv(lightDiffuse, 1, glm::value_ptr(light.Diffuse));
 
         int lightSpecular = glGetUniformLocation(shader.ID, "light.specular");
-        glUniform3fv(lightSpecular, 1, glm::value_ptr(light.Diffuse));
+        glUniform3fv(lightSpecular, 1, glm::value_ptr(light.Specular));
 
         int lightDirection = glGetUniformLocation(shader.ID, "light.direction");
         glUniform3fv(lightDirection, 1, glm::value_ptr(light.Direction));
@@ -180,6 +210,12 @@ public:
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(transform));
 
         glDrawElements(GL_TRIANGLES, (int)mesh.Indices.size(), GL_UNSIGNED_INT, 0);
+    }
+
+private:
+    const std::string pointLightAttribute(const std::string &attribute, int index)
+    {
+        return std::string("pointLights[") + std::to_string(index) + "]." + attribute;
     }
 };
 class OpenGLManager

@@ -76,7 +76,7 @@ int main()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     OpenGLManager manager;
-    std::shared_ptr<Shader> lightShader(new Shader("./shader/vLight.glsl", "./shader/fLightTextureFlashlight.glsl"));
+    std::shared_ptr<Shader> lightShader(new Shader("./shader/vLight.glsl", "./shader/fMultiLightTexture.glsl"));
     std::shared_ptr<Shader> dLightShader(new Shader("./shader/vLight.glsl", "./shader/fWhite.glsl"));
 
     std::vector<Image> images = {
@@ -123,10 +123,25 @@ int main()
         glm::vec3(1.5f, 2.0f, -2.5f),
         glm::vec3(1.5f, 0.2f, -1.5f),
         glm::vec3(-1.3f, 1.0f, -1.5f)};
+    glm::vec3 pointLightPositions[] = {
+        glm::vec3(0.7f, 0.2f, 2.0f),
+        glm::vec3(2.3f, -3.3f, -4.0f),
+        glm::vec3(-4.0f, 2.0f, -12.0f),
+        glm::vec3(0.0f, 0.0f, -3.0f)};
+    std::vector<Light> pointLights(pointLightPositions->length());
+    for (auto pointLightPosition : pointLightPositions)
+    {
+        Light pLight;
+        pLight.Position = glm::vec3(0.0f, 0.2f, 1.0f);
+        pLight.Ambiant = glm::vec3(0.2f, 0.2f, 0.2f);
+        pLight.Diffuse = glm::vec3(1.0f, 1.0f, 1.0f);
+        pLight.Specular = glm::vec3(1.0f, 1.0f, 1.0f);
+        pLight.Position = pointLightPosition;
+        pointLights.push_back(pLight);
+    }
 
     while (!glfwWindowShouldClose(window))
     {
-
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
@@ -146,16 +161,13 @@ int main()
         // ------
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        camera.Position = glm::vec3(0.2f, 0.0f, 5.0f);
+        camera.Position = glm::vec3(0.2f, 0.0f, 2.0f);
         camera.Target = glm::vec3(0.0f, 0.0f, 0.0f);
         glm::vec3 cameraFront = glm::normalize(camera.Target - camera.Position);
         light.Direction = glm::vec3(cameraFront);
         light.Position = camera.Position;
         render.useLight(*lightShader, light, camera);
-        /*  camera.transform = glm::rotate(camera.transform, glm::radians(5.0f), camera.up); */
-        /*        camera.transform = glm::rotate(glm::mat4(1.0f), glm::radians(60.0f), camera.up); */
-        // position
+        render.addPointLights(*lightShader, pointLights, camera);
         for (unsigned int i = 0; i < 10; i++)
         {
             glm::mat4 model = glm::mat4(1.0f);
@@ -165,12 +177,13 @@ int main()
             model = glm::scale(model, glm::vec3(0.8f));
             render.render(camera, mesh, mat, model);
         }
-        /*  glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, light.Position);
-        model = glm::scale(model, glm::vec3(0.2f));
-        render.render(camera, mesh, lMat, model); */
-        /* render.render(camera, mesh, mat, glm::translate(model, glm::vec3(0.0f, 0.0f, 1.0f)));
-        render.render(camera, mesh, mat, glm::translate(model, glm::vec3(0.0f, 1.0f, 0.0f))); */
+        for (auto pointLightPosition : pointLightPositions)
+        {
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, pointLightPosition);
+            model = glm::scale(model, glm::vec3(0.2f));
+            render.render(camera, mesh, lMat, model);
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
