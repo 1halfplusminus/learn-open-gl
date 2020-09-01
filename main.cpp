@@ -17,7 +17,8 @@ unsigned int initShaderProgram();
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
-int main() {
+int main()
+{
   glfwInit();
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -27,13 +28,16 @@ int main() {
   // --------------------
   GLFWwindow *window =
       glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
-  if (window == NULL) {
+
+  if (window == NULL)
+  {
     std::cout << "Failed to create GLFW window" << std::endl;
     glfwTerminate();
     return -1;
   }
   glfwMakeContextCurrent(window);
-  if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+  if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+  {
     std::cout << "Failed to initialize GLAD" << std::endl;
     return -1;
   }
@@ -41,7 +45,8 @@ int main() {
   Shader shader("./shader/vertex.glsl", "./shader/fragment.glsl");
   unsigned int VAO = createTriangle();
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-  while (!glfwWindowShouldClose(window)) {
+  while (!glfwWindowShouldClose(window))
+  {
     // input
     // -----
     processInput(window);
@@ -71,12 +76,13 @@ int main() {
   return 0;
 }
 
-unsigned int createTriangle() {
+unsigned int createTriangle()
+{
   float vertices[] = {
       // positions         // colors
-      0.5f,  -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom right
+      0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f,  // bottom right
       -0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, // bottom left
-      0.0f,  0.5f,  0.0f, 0.0f, 0.0f, 1.0f  // top
+      0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f    // top
   };
   unsigned int indices[] = {
       // note that we start from 0!
@@ -110,11 +116,13 @@ unsigned int createTriangle() {
 // process all input: query GLFW whether relevant keys are pressed/released this
 // frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window) {
+void processInput(GLFWwindow *window)
+{
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
     glfwSetWindowShouldClose(window, true);
 }
 
-void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
+void framebuffer_size_callback(GLFWwindow *window, int width, int height)
+{
   glViewport(0, 0, width, height);
 }

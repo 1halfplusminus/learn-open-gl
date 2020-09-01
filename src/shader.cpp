@@ -5,7 +5,8 @@
 // clang-format on
 #include <vector>
 
-Shader::Shader(const char *vertexPath, const char *fragmentPath) {
+Shader::Shader(const char *vertexPath, const char *fragmentPath)
+{
   // build and compile our shader program
   // ------------------------------------
   // vertex shader
@@ -40,25 +41,31 @@ Shader::Shader(const char *vertexPath, const char *fragmentPath) {
 void Shader::use() { glUseProgram(ID); }
 // utility uniform functions
 // ------------------------------------------------------------------------
-void Shader::setBool(const std::string &name, bool value) const {
+void Shader::setBool(const std::string &name, bool value) const
+{
   glUniform1i(glGetUniformLocation(ID, name.c_str()), (int)value);
 }
 // ------------------------------------------------------------------------
-void Shader::setInt(const std::string &name, int value) const {
+void Shader::setInt(const std::string &name, int value) const
+{
   glUniform1i(glGetUniformLocation(ID, name.c_str()), value);
 }
 // ------------------------------------------------------------------------
-void Shader::setFloat(const std::string &name, float value) const {
+void Shader::setFloat(const std::string &name, float value) const
+{
   glUniform1f(glGetUniformLocation(ID, name.c_str()), value);
 }
 // utility function for checking shader compilation/linking errors.
 // ------------------------------------------------------------------------
-void Shader::checkCompileErrors(unsigned int shader, std::string type) {
+void Shader::checkCompileErrors(unsigned int shader, std::string type)
+{
   int success;
   char infoLog[1024];
-  if (type != "PROGRAM") {
+  if (type != "PROGRAM")
+  {
     glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
+    if (!success)
+    {
       glGetShaderInfoLog(shader, 1024, NULL, infoLog);
       std::cout
           << "ERROR::SHADER_COMPILATION_ERROR of type: " << type << "\n"
@@ -66,9 +73,12 @@ void Shader::checkCompileErrors(unsigned int shader, std::string type) {
           << "\n -- --------------------------------------------------- -- "
           << std::endl;
     }
-  } else {
+  }
+  else
+  {
     glGetProgramiv(shader, GL_LINK_STATUS, &success);
-    if (!success) {
+    if (!success)
+    {
       glGetProgramInfoLog(shader, 1024, NULL, infoLog);
       std::cout
           << "ERROR::PROGRAM_LINKING_ERROR of type: " << type << "\n"
@@ -78,11 +88,13 @@ void Shader::checkCompileErrors(unsigned int shader, std::string type) {
     }
   }
 }
-const std::string Shader::readFile(const std::string path) {
+const std::string Shader::readFile(const std::string path)
+{
   std::ifstream ifs(path.c_str(),
                     std::ios::in | std::ios::binary | std::ios::ate);
 
-  if (ifs.bad()) {
+  if (ifs.bad())
+  {
     std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ " << std::endl;
   }
   std::ifstream::pos_type fileSize = ifs.tellg();
