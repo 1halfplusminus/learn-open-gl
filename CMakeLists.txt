@@ -13,6 +13,7 @@ INCLUDE_DIRECTORIES(./stb)
 
 add_subdirectory (glfw)
 add_subdirectory (glm)
+add_subdirectory (assimp)
 
 set(ALL_LIBS
 	${OPENGL_LIBRARY}
@@ -45,6 +46,12 @@ target_link_libraries(get_started ${ALL_LIBS} test_library)
 
 add_executable(lighting_color lighting_color.cpp ${HEADER_FILES})
 target_link_libraries(lighting_color ${ALL_LIBS} test_library)
+
+add_executable(model_loading model_loading.cpp ${HEADER_FILES})
+target_link_libraries(model_loading ${ALL_LIBS} test_library)
+
+add_executable(sprite_renderer sprite_renderer.cpp ${HEADER_FILES})
+target_link_libraries(sprite_renderer ${ALL_LIBS} test_library)
 
 file(COPY "./shader" DESTINATION  "./Debug")
 file(COPY "./texture" DESTINATION  "./Debug")

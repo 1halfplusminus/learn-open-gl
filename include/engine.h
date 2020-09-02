@@ -40,7 +40,16 @@ struct Vertex
         Normal = normal;
     }
 };
-
+enum TextureType
+{
+    Diffuse,
+    Specular
+};
+struct Texture
+{
+    unsigned int id;
+    TextureType type;
+};
 struct Mesh
 {
 public:
@@ -48,6 +57,7 @@ public:
     std::vector<Vertex> Vertices;
     std::vector<unsigned int> Indices;
     unsigned int Id;
+    int MaterialID;
     /*   std::vector<Texture> textures; */
 };
 struct OpenGLVAO
@@ -65,7 +75,7 @@ public:
     glm::vec3 specular;
     glm::vec3 color;
     std::shared_ptr<Shader> shader;
-    std::vector<unsigned int> textures;
+    std::vector<Texture> textures;
     Material(const std::shared_ptr<Shader> shader) { this->shader = shader; }
 };
 struct Image
@@ -163,21 +173,30 @@ public:
     void render(Camera &camera, const Mesh &mesh, Material &mat, glm::mat4 transform)
     {
         mat.shader->use();
-        glUniform1i(glGetUniformLocation(mat.shader->ID, "texture1"), 0);
-        glUniform1i(glGetUniformLocation(mat.shader->ID, "texture2"), 1);
-        // diffuse
-        int materialDiffuse = glGetUniformLocation(mat.shader->ID, "material.diffuse");
-        glUniform1i(materialDiffuse, 0);
-        int materialSpecular = glGetUniformLocation(mat.shader->ID, "material.specular");
-        glUniform1i(materialSpecular, 1);
-        int i = 0;
+        unsigned int diffuseNr = 1;
+        unsigned int specularNr = 1;
+        unsigned int i = 0;
         for (auto text : mat.textures)
         {
             glActiveTexture(GL_TEXTURE0 + i);
-            glBindTexture(GL_TEXTURE_2D, text);
+            int uniformLocation;
+            unsigned int number;
+            switch (text.type)
+            {
+            case TextureType::Diffuse:
+                number = diffuseNr++;
+                uniformLocation = glGetUniformLocation(mat.shader->ID, "material.texture_diffuse" + number);
+                break;
+            case TextureType::Specular:
+                number = specularNr++;
+                uniformLocation = glGetUniformLocation(mat.shader->ID, "material.texture_specular" + number);
+            default:
+                break;
+            }
+            glUniform1i(uniformLocation, i);
+            glBindTexture(GL_TEXTURE_2D, text.id);
             ++i;
         }
-        glBindVertexArray(mesh.Id);
 
         int shininess = glGetUniformLocation(mat.shader->ID, "material.shininess");
         glUniform1f(shininess, mat.shininess);
@@ -195,6 +214,7 @@ public:
         int modelLoc = glGetUniformLocation(mat.shader->ID, "model");
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(transform));
 
+        glBindVertexArray(mesh.Id);
         glDrawElements(GL_TRIANGLES, (int)mesh.Indices.size(), GL_UNSIGNED_INT, 0);
     }
 
@@ -284,6 +304,43 @@ public:
         return texture;
     }
 };
+
+Mesh createPlane()
+{
+    const int rowSize = 5;
+    Mesh plane;
+    float normals[] = {
+        0.0f, 0.0f, -1.0f,
+        0.0f, 0.0f, -1.0f,
+        0.0f, 0.0f, -1.0f,
+        0.0f, 0.0f, -1.0f,
+        0.0f, 0.0f, -1.0f,
+        0.0f, 0.0f, -1.0f};
+    std::vector<float> vertices = {
+        -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
+        0.5f, -0.5f, -0.5f, 1.0f, 0.0f,
+        0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
+        0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
+        -0.5f, 0.5f, -0.5f, 0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f, 0.0f, 0.0f};
+    int nbVertice = (int)vertices.size() / rowSize;
+    plane.Vertices = std::vector<Vertex>(nbVertice);
+    int j = 0;
+    for (int i = 0; i < vertices.size(); i = i + rowSize)
+    {
+        int indice = i / rowSize;
+        plane.Vertices[indice] =
+            Vertex(glm::vec3(vertices[i], vertices[i + 1], vertices[i + 2]),
+                   glm::vec2(vertices[i + 3], vertices[i + 4]),
+                   glm::vec3(normals[j], normals[j + 1], normals[j + 2]));
+        j = j + 3;
+    }
+    std::vector<unsigned int> indices(nbVertice);
+    std::iota(indices.begin(), indices.end(), 0);
+    plane.Indices = indices;
+
+    return plane;
+}
 Mesh createCube()
 {
     const int rowSize = 5;
