@@ -108,31 +108,33 @@ public:
     MeshRenderer()
     {
     }
+    void addSpotLights(Shader &shader, const std::vector<Light> &lights, Camera &camera)
+    {
+        shader.use();
+        int nbSpotLight = 0;
+        std::string uniformName("spotLights");
+        for (auto light : lights)
+        {
+            addLight(shader, light, camera, uniformName, nbSpotLight);
+            shader.setFloat(getUniformName(uniformName, "quadratic", nbSpotLight), light.Quadratic);
+            shader.setFloat(getUniformName(uniformName, "cutOff", nbSpotLight), glm::cos(glm::radians(light.CutOff)));
+            shader.setFloat(getUniformName(uniformName, "outerCutOff", nbSpotLight), glm::cos(glm::radians(light.OuterCutOff)));
+            ++nbSpotLight;
+        }
+
+        shader.setInt("nbSpotLight", nbSpotLight);
+    }
     void addPointLights(Shader &shader, const std::vector<Light> &lights, Camera &camera)
     {
         shader.use();
         int nbPointLight = 0;
+        std::string uniformName("pointLights");
         for (auto light : lights)
         {
-            glm::vec3 position = camera.calculateViewMatrix() * glm::vec4(light.Position, 1.0f);
-            int ligthPosition = glGetUniformLocation(shader.ID, pointLightAttribute("position", nbPointLight).c_str());
-            glUniform3fv(ligthPosition, 1, glm::value_ptr(position));
-
-            int lightAmbient = glGetUniformLocation(shader.ID, pointLightAttribute("ambient", nbPointLight).c_str());
-            glUniform3fv(lightAmbient, 1, glm::value_ptr(light.Ambiant));
-
-            int lightDiffuse = glGetUniformLocation(shader.ID, pointLightAttribute("diffuse", nbPointLight).c_str());
-            glUniform3fv(lightDiffuse, 1, glm::value_ptr(light.Diffuse));
-
-            int lightSpecular = glGetUniformLocation(shader.ID, pointLightAttribute("specular", nbPointLight).c_str());
-            glUniform3fv(lightSpecular, 1, glm::value_ptr(light.Specular));
-
-            int lightDirection = glGetUniformLocation(shader.ID, pointLightAttribute("direction", nbPointLight).c_str());
-            glUniform3fv(lightDirection, 1, glm::value_ptr(light.Direction));
-
-            shader.setFloat(pointLightAttribute("constant", nbPointLight), light.Constant);
-            shader.setFloat(pointLightAttribute("linear", nbPointLight), light.Linear);
-            shader.setFloat(pointLightAttribute("quadratic", nbPointLight), light.Quadratic);
+            addLight(shader, light, camera, uniformName, nbPointLight);
+            shader.setFloat(getUniformName(uniformName, "constant", nbPointLight), light.Constant);
+            shader.setFloat(getUniformName(uniformName, "linear", nbPointLight), light.Linear);
+            shader.setFloat(getUniformName(uniformName, "quadratic", nbPointLight), light.Quadratic);
             ++nbPointLight;
         }
 
@@ -157,12 +159,6 @@ public:
 
         int lightDirection = glGetUniformLocation(shader.ID, "light.direction");
         glUniform3fv(lightDirection, 1, glm::value_ptr(light.Direction));
-
-        shader.setFloat("light.constant", light.Constant);
-        shader.setFloat("light.linear", light.Linear);
-        shader.setFloat("light.quadratic", light.Quadratic);
-        shader.setFloat("light.cutOff", glm::cos(glm::radians(light.CutOff)));
-        shader.setFloat("light.outerCutOff", glm::cos(glm::radians(light.OuterCutOff)));
     }
     void render(Camera &camera, const Mesh &mesh, Material &mat, glm::mat4 transform)
     {
@@ -182,16 +178,6 @@ public:
             ++i;
         }
         glBindVertexArray(mesh.Id);
-
-        // material
-        /*     int materialAmbient = glGetUniformLocation(mat.shader->ID, "material.ambient");
-        glUniform3fv(materialAmbient, 1, glm::value_ptr(mat.ambient)); */
-
-        /*  int materialDiffuse = glGetUniformLocation(mat.shader->ID, "material.diffuse");
-        glUniform3fv(materialDiffuse, 1, glm::value_ptr(mat.diffuse)); */
-
-        /* int materialSpecular = glGetUniformLocation(mat.shader->ID, "material.specular");
-        glUniform3fv(materialSpecular, 1, glm::value_ptr(mat.specular)); */
 
         int shininess = glGetUniformLocation(mat.shader->ID, "material.shininess");
         glUniform1f(shininess, mat.shininess);
@@ -213,9 +199,27 @@ public:
     }
 
 private:
-    const std::string pointLightAttribute(const std::string &attribute, int index)
+    void addLight(const Shader &shader, const Light &light, Camera &camera, const std::string &name, int index)
     {
-        return std::string("pointLights[") + std::to_string(index) + "]." + attribute;
+        glm::vec3 position = camera.calculateViewMatrix() * glm::vec4(light.Position, 1.0f);
+        int ligthPosition = glGetUniformLocation(shader.ID, getUniformName(name, "position", index).c_str());
+        glUniform3fv(ligthPosition, 1, glm::value_ptr(position));
+
+        int lightAmbient = glGetUniformLocation(shader.ID, getUniformName(name, "ambient", index).c_str());
+        glUniform3fv(lightAmbient, 1, glm::value_ptr(light.Ambiant));
+
+        int lightDiffuse = glGetUniformLocation(shader.ID, getUniformName(name, "diffuse", index).c_str());
+        glUniform3fv(lightDiffuse, 1, glm::value_ptr(light.Diffuse));
+
+        int lightSpecular = glGetUniformLocation(shader.ID, getUniformName(name, "specular", index).c_str());
+        glUniform3fv(lightSpecular, 1, glm::value_ptr(light.Specular));
+
+        int lightDirection = glGetUniformLocation(shader.ID, getUniformName(name, "direction", index).c_str());
+        glUniform3fv(lightDirection, 1, glm::value_ptr(light.Direction));
+    }
+    const std::string getUniformName(const std::string &name, const std::string &attribute, int index)
+    {
+        return name + "[" + std::to_string(index) + "]." + attribute;
     }
 };
 class OpenGLManager

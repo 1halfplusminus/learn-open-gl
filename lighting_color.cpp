@@ -127,16 +127,18 @@ int main()
         glm::vec3(0.7f, 0.2f, 2.0f),
         glm::vec3(2.3f, -3.3f, -4.0f),
         glm::vec3(-4.0f, 2.0f, -12.0f),
-        glm::vec3(0.0f, 0.0f, -3.0f)};
+        glm::vec3(0.0f, 0.0f, 5.0f),
+    };
     std::vector<Light> pointLights(pointLightPositions->length());
     for (auto pointLightPosition : pointLightPositions)
     {
         Light pLight;
         pLight.Position = glm::vec3(0.0f, 0.2f, 1.0f);
-        pLight.Ambiant = glm::vec3(0.2f, 0.2f, 0.2f);
+        pLight.Ambiant = glm::vec3(0.1f, 0.1f, 0.1f);
         pLight.Diffuse = glm::vec3(1.0f, 1.0f, 1.0f);
         pLight.Specular = glm::vec3(1.0f, 1.0f, 1.0f);
         pLight.Position = pointLightPosition;
+        pLight.Direction = glm::vec3(0.0f, 0.0f, -1.0f);
         pointLights.push_back(pLight);
     }
 
@@ -161,13 +163,13 @@ int main()
         // ------
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        camera.Position = glm::vec3(0.2f, 0.0f, 2.0f);
+        camera.Position = glm::vec3(0.2f, 0.0f, 3.0f);
         camera.Target = glm::vec3(0.0f, 0.0f, 0.0f);
         glm::vec3 cameraFront = glm::normalize(camera.Target - camera.Position);
         light.Direction = glm::vec3(cameraFront);
         light.Position = camera.Position;
-        render.useLight(*lightShader, light, camera);
-        render.addPointLights(*lightShader, pointLights, camera);
+        /*         render.useLight(*lightShader, light, camera); */
+        render.addSpotLights(*lightShader, pointLights, camera);
         for (unsigned int i = 0; i < 10; i++)
         {
             glm::mat4 model = glm::mat4(1.0f);
