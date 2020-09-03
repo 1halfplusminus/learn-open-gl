@@ -59,7 +59,9 @@ int main() {
   // INIT OPEN GL
   glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
   glEnable(GL_BLEND);
+  glEnable(GL_CULL_FACE);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glCullFace(GL_BACK);
   /*  glEnable(GL_DEPTH_TEST); */
   /*   glDepthFunc(GL_ALWAYS); */
   // init texture
@@ -123,10 +125,7 @@ int main() {
       glm::translate(glm::mat4(1.0f), glm::vec3(0.5f, 0.0f, -0.6f)));
 
   std::vector<Sprite> sprites((int)vegetation.size());
-  /* for (int i = 0; i < sprites.size(); ++i) {
-    Sprite sprite;
-    sprites[i] = sprite;
-  } */
+
   while (!glfwWindowShouldClose(window)) {
     double currentFrame = glfwGetTime();
     deltaTime = currentFrame - lastFrame;

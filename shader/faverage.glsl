@@ -1,7 +1,6 @@
 #version 330 core
 out vec4 FragColor;
 
-in vec3 ourColor;
 in vec2 TexCoord;
 
 struct Material {
@@ -16,6 +15,7 @@ struct Material {
 uniform Material material;
 
 void main() {
-  vec4 texColor = texture(material.texture_diffuse1, TexCoord);
-  FragColor = texColor;
+  vec4 text = texture(material.texture_diffuse1, TexCoord);
+  float average = 0.2126 * text.r + 0.7152 * text.g + 0.0722 * text.b;
+  FragColor = vec4(average, average, average, 1.0);
 }

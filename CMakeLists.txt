@@ -72,6 +72,12 @@ target_link_libraries(stencil_testing ${ALL_LIBS} test_library)
 add_executable(blending blending.cpp ${HEADER_FILES})
 target_link_libraries(blending ${ALL_LIBS} test_library)
 
+add_executable(face_culling face_culling.cpp ${HEADER_FILES})
+target_link_libraries(face_culling ${ALL_LIBS} test_library)
+
+add_executable(frame_buffer frame_buffer.cpp ${HEADER_FILES})
+target_link_libraries(frame_buffer ${ALL_LIBS} test_library)
+
 file(COPY "./shader" DESTINATION  "./Debug")
 file(COPY "./texture" DESTINATION  "./Debug")
 

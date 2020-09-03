@@ -1,7 +1,6 @@
 #version 330 core
 out vec4 FragColor;
 
-in vec3 ourColor;
 in vec2 TexCoord;
 
 struct Material {
@@ -15,7 +14,4 @@ struct Material {
 
 uniform Material material;
 
-void main() {
-  vec4 texColor = texture(material.texture_diffuse1, TexCoord);
-  FragColor = texColor;
-}
+void main() { FragColor = texture(material.texture_diffuse1, TexCoord); }

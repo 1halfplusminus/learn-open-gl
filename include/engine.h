@@ -44,7 +44,7 @@ struct Vertex {
 enum TextureType { Diffuse, Specular };
 struct Texture {
   unsigned int id;
-  TextureType type;
+  TextureType type = TextureType::Diffuse;
 };
 struct Mesh {
 public:
@@ -147,6 +147,28 @@ public:
 
     return openGlMesh.VAO;
   }
+  unsigned int createTexture2D(const aiTexture *aiTexture) {
+    unsigned int texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture); // Binding of texture name
+    //
+    // redefine standard texture values
+    //
+    // We will use linear interpolation for magnification filter
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    // tiling mode
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
+                    (aiTexture->achFormatHint[0] & 0x01) ? GL_REPEAT
+                                                         : GL_CLAMP);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,
+                    (aiTexture->achFormatHint[0] & 0x01) ? GL_REPEAT
+                                                         : GL_CLAMP);
+    // Texture specification
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 500, 500, 0, GL_BGRA,
+                 GL_UNSIGNED_BYTE, (void *)aiTexture->pcData);
+    return texture;
+  }
   unsigned int createTexture2D(const Image &image) {
     unsigned int texture;
     glGenTextures(1, &texture);
@@ -158,10 +180,24 @@ public:
         format = GL_RGB;
       else if (image.nrChannels == 4)
         format = GL_RGBA;
+      else
+        format = GL_RGBA8;
+      std::cout << "Image format: " << image.nrChannels << "\n";
       // bind texture
       glBindTexture(GL_TEXTURE_2D, texture);
       glTexImage2D(GL_TEXTURE_2D, 0, format, image.width, image.height, 0,
                    format, GL_UNSIGNED_BYTE, image.data);
+
+      // texture wrapping
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+      // texture filtering
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      // texture mipmap
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                      GL_LINEAR_MIPMAP_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
       glGenerateMipmap(GL_TEXTURE_2D);
     }
 
@@ -444,6 +480,9 @@ public:
     }
     return materials->at(id);
   }
+
+  const std::vector<Material> getMaterials() { return *materials; }
+
   const Texture loadTexture(Image &image) {
     if (textures->find(image.path) == textures->end()) {
       Texture texture = loadImage(image);
@@ -452,6 +491,16 @@ public:
       return texture;
     }
     return getTexture(image.path);
+  }
+  const Texture loadTexture(const aiTexture *aiTexture) {
+    if (textures->find(aiTexture->mFilename.C_Str()) == textures->end()) {
+      Texture texture;
+      texture.id = rendeder.createTexture2D(aiTexture);
+      textures->insert({aiTexture->mFilename.C_Str(), texture});
+      std::cout << "Texture " << texture.id << " loaded \n";
+      return texture;
+    }
+    return getTexture(aiTexture->mFilename.C_Str());
   }
   const Texture getTexture(const std::string &path) {
     if (textures->find(path) == textures->end()) {
@@ -464,13 +513,15 @@ public:
 private:
   Texture loadImage(Image &image) {
     // load image
-    stbi_set_flip_vertically_on_load(image.flipVertically);
-    image.data = stbi_load(image.path.c_str(), &image.width, &image.height,
-                           &image.nrChannels, 0);
+    if (!image.data) {
+      stbi_set_flip_vertically_on_load(image.flipVertically);
+      image.data = stbi_load(image.path.c_str(), &image.width, &image.height,
+                             &image.nrChannels, 0);
+      stbi_image_free(image.data);
+    }
     Texture texture;
     texture.id = rendeder.createTexture2D(image);
     texture.type = TextureType::Diffuse;
-    stbi_image_free(image.data);
     return texture;
   }
   std::unique_ptr<std::unordered_map<std::string, Texture>> textures;
@@ -485,7 +536,7 @@ public:
     Assimp::Importer import;
 
     const aiScene *scene =
-        import.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
+        import.ReadFile(path, aiProcess_Triangulate | aiProcess_GenNormals);
     if (!scene || scene->mFlags && AI_SCENE_FLAGS_INCOMPLETE ||
         !scene->mRootNode) {
       std::cout << "ERROR::ASSIMP::" << import.GetErrorString() << std::endl;
@@ -536,13 +587,20 @@ private:
         glm::vec2 vec;
         vec.x = mesh->mTextureCoords[0][i].x;
         vec.y = mesh->mTextureCoords[0][i].y;
+        std::cout << "u: " << vec.x << " v: " << vec.y << "\n";
         vertex.TexCoords = vec;
-      } else
+      } else {
+        std::cout << "no texture coords \n";
         vertex.TexCoords = glm::vec2(0.0f, 0.0f);
+      }
+      std::cout << "x: " << vertex.Position.x << " y: " << vertex.Position.y
+                << " z: " << vertex.Position.z << "\n";
       vertices.push_back(vertex);
     }
+    std::cout << mesh->mNumFaces << " face \n";
     for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
       aiFace face = mesh->mFaces[i];
+      std::cout << face.mNumIndices << " indices \n";
       for (unsigned int j = 0; j < face.mNumIndices; j++)
         indices.push_back(face.mIndices[j]);
     }
@@ -551,11 +609,11 @@ private:
       aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
       // load diffuse texture
       std::vector<Texture> diffuseMaps = loadMaterialTextures(
-          material, aiTextureType_DIFFUSE, TextureType::Diffuse);
+          scene, material, aiTextureType_DIFFUSE, TextureType::Diffuse);
       textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
       // load spec
       std::vector<Texture> specularMaps = loadMaterialTextures(
-          material, aiTextureType_SPECULAR, TextureType::Specular);
+          scene, material, aiTextureType_SPECULAR, TextureType::Specular);
       textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
       mat.textures = textures;
       matId = resourceManager.addMaterial(mat);
@@ -566,16 +624,41 @@ private:
     }
     return mMesh;
   }
-  std::vector<Texture> loadMaterialTextures(aiMaterial *mat, aiTextureType type,
+  std::vector<Texture> loadMaterialTextures(const aiScene *scene,
+                                            aiMaterial *mat, aiTextureType type,
                                             TextureType textureType) {
     std::vector<Texture> textures;
     for (unsigned int i = 0; i < mat->GetTextureCount(type); i++) {
       aiString str;
       mat->GetTexture(type, i, &str);
-      Image image(directory + "/" + str.C_Str(), true);
-      Texture texture = resourceManager.loadTexture(image);
-      texture.type = textureType;
-      textures.push_back(texture);
+      if (auto embeddedTexture = scene->GetEmbeddedTexture(str.C_Str())) {
+        // returned pointer is not null, read texture from memory
+        std::cout << "embedded texture " << embeddedTexture->mFilename.C_Str()
+                  << " width : " << embeddedTexture->mWidth << "\n"
+                  << " height : " << embeddedTexture->mHeight << "\n"
+                  << " hint : " << embeddedTexture->achFormatHint << "\n";
+        unsigned char *img;
+        int width, height, type;
+        unsigned char *res_data = (unsigned char *)embeddedTexture->pcData;
+        img = stbi_load_from_memory(res_data, (int)embeddedTexture->mWidth,
+                                    &width, &height, &type, 0);
+        Image image;
+        image.data = img;
+        image.height = height;
+        image.width = width;
+        image.path = embeddedTexture->mFilename.C_Str();
+        image.nrChannels = type;
+        Texture texture = resourceManager.loadTexture(image);
+        texture.type = textureType;
+        textures.push_back(texture);
+      } else {
+        // regular file, check if it exists and read it
+        std::cout << "reading file " << str.C_Str() << "\n";
+        Image image(directory + "/" + str.C_Str(), true);
+        Texture texture = resourceManager.loadTexture(image);
+        texture.type = textureType;
+        textures.push_back(texture);
+      }
     }
     return textures;
   }
@@ -695,7 +778,12 @@ public:
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(transform));
 
     glBindVertexArray(mesh.Id);
-    glDrawElements(GL_TRIANGLES, (int)mesh.Indices.size(), GL_UNSIGNED_INT, 0);
+    if (mesh.Indices.size() > 0) {
+      glDrawElements(GL_TRIANGLES, (int)mesh.Indices.size(), GL_UNSIGNED_INT,
+                     0);
+    } else {
+      glDrawArrays(GL_TRIANGLES, 0, (int)mesh.Vertices.size());
+    }
   }
   void render(Camera &camera, const Mesh &mesh, Material &mat,
               glm::mat4 transform) {

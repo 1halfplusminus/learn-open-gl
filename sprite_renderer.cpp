@@ -104,9 +104,6 @@ int main() {
   int nbFrameY = 12;
 
   SpriteSheet spritesheet = SpriteSheet::fixed_size(12, 8);
-  for (Sprite &sprite : spritesheet.getSprites()) {
-    manager.createBuffer(sprite.mesh);
-  }
   int nbFrames = 0;
   const int nbTestSprite = 10000;
   SpriteRenderer spriterender;

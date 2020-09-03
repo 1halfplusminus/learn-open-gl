@@ -126,5 +126,5 @@ void main() {
   for (int i = 0; i < nbSpotLight; i++)
     result += CalcSpotLight(spotLights[i], norm, FragPos, viewDir);
 
-  FragColor = vec4(result, 1.0);
+  FragColor = texture(material.texture_diffuse1, TexCoord);
 }
