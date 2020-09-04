@@ -23,16 +23,19 @@ const unsigned int SCR_HEIGHT = 600;
 float deltaTime = 0.0f; // Time between current frame and last frame
 float lastFrame = 0.0f; // Time of last frame
 
-void processInput(GLFWwindow *window) {
+void processInput(GLFWwindow *window)
+{
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
     glfwSetWindowShouldClose(window, true);
 }
 
-void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
+void framebuffer_size_callback(GLFWwindow *window, int width, int height)
+{
   glViewport(0, 0, width, height);
 }
 
-int main() {
+int main()
+{
   // GLFW
   glfwInit();
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -42,7 +45,8 @@ int main() {
   GLFWwindow *window =
       glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Get Started", NULL, NULL);
 
-  if (window == NULL) {
+  if (window == NULL)
+  {
     std::cout << "Failed to create GLFW window" << std::endl;
     glfwTerminate();
     return -1;
@@ -51,7 +55,8 @@ int main() {
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
   // INIT GLAD
-  if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+  if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+  {
     std::cout << "Failed to initialize GLAD" << std::endl;
     return -1;
   }
@@ -88,9 +93,10 @@ int main() {
   Material mat = Material(lightShader);
   Material lMat = Material(dLightShader);
   resourceManager->addMaterial(mat);
-  for (auto image : images) {
+  for (auto image : images)
+  {
     // load image
-    Texture texture = resourceManager->loadTexture(image);
+    Texture texture = resourceManager->loadTexture2D(image);
     texture.type = TextureType::Diffuse;
     mat.textures.push_back(texture);
   }
@@ -112,11 +118,11 @@ int main() {
   light.Specular = glm::vec3(1.0f, 1.0f, 1.0f);
 
   glm::vec3 cubePositions[] = {
-      glm::vec3(0.0f, 0.0f, 0.0f),    glm::vec3(2.0f, 5.0f, -15.0f),
+      glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(2.0f, 5.0f, -15.0f),
       glm::vec3(-1.5f, -2.2f, -2.5f), glm::vec3(-3.8f, -2.0f, -12.3f),
-      glm::vec3(2.4f, -0.4f, -3.5f),  glm::vec3(-1.7f, 3.0f, -7.5f),
-      glm::vec3(1.3f, -2.0f, -2.5f),  glm::vec3(1.5f, 2.0f, -2.5f),
-      glm::vec3(1.5f, 0.2f, -1.5f),   glm::vec3(-1.3f, 1.0f, -1.5f)};
+      glm::vec3(2.4f, -0.4f, -3.5f), glm::vec3(-1.7f, 3.0f, -7.5f),
+      glm::vec3(1.3f, -2.0f, -2.5f), glm::vec3(1.5f, 2.0f, -2.5f),
+      glm::vec3(1.5f, 0.2f, -1.5f), glm::vec3(-1.3f, 1.0f, -1.5f)};
   glm::vec3 pointLightPositions[] = {
       glm::vec3(0.7f, 0.2f, 2.0f),
       glm::vec3(2.3f, -3.3f, -4.0f),
@@ -124,7 +130,8 @@ int main() {
       glm::vec3(0.0f, 0.0f, 5.0f),
   };
   std::vector<Light> pointLights(pointLightPositions->length());
-  for (auto pointLightPosition : pointLightPositions) {
+  for (auto pointLightPosition : pointLightPositions)
+  {
     Light pLight;
     pLight.Position = glm::vec3(0.0f, 0.2f, 1.0f);
     pLight.Ambiant = glm::vec3(0.1f, 0.1f, 0.1f);
@@ -135,7 +142,8 @@ int main() {
     pointLights.push_back(pLight);
   }
 
-  while (!glfwWindowShouldClose(window)) {
+  while (!glfwWindowShouldClose(window))
+  {
     float currentFrame = glfwGetTime();
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
@@ -154,7 +162,8 @@ int main() {
     light.Position = camera.Position;
     /*         render.useLight(*lightShader, light, camera); */
     render.addSpotLights(*lightShader, pointLights, camera);
-    for (unsigned int i = 0; i < 2; i++) {
+    for (unsigned int i = 0; i < 2; i++)
+    {
       glm::mat4 model = glm::mat4(1.0f);
       model = glm::translate(model, cubePositions[i]);
       float angle = 20.0f * i;
@@ -163,7 +172,8 @@ int main() {
       model = glm::scale(model, glm::vec3(0.8f));
       render.render(camera, mesh, mat, model);
     }
-    for (auto pointLightPosition : pointLightPositions) {
+    for (auto pointLightPosition : pointLightPositions)
+    {
       glm::mat4 model = glm::mat4(1.0f);
       model = glm::translate(model, pointLightPosition);
       model = glm::scale(model, glm::vec3(0.2f));

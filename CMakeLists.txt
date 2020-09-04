@@ -30,10 +30,10 @@ set(ALL_LIBS
 	glm
 	assimp
 )
-set(HEADER_FILES ./stb/stb_image.h ./include/engine.h)
+set(HEADER_FILES ./stb/stb_image.h ./include/engine.h ./include/shader.h)
 
 add_library(test_library STATIC ./glad/src/glad.c ./src/shader)
-target_include_directories(test_library PRIVATE ./stb)
+target_include_directories(test_library PRIVATE ./stb ${ALL_LIBS})
 
 add_executable(openglc main.cpp )
 target_link_libraries(openglc ${ALL_LIBS} test_library)
@@ -77,6 +77,12 @@ target_link_libraries(face_culling ${ALL_LIBS} test_library)
 
 add_executable(frame_buffer frame_buffer.cpp ${HEADER_FILES})
 target_link_libraries(frame_buffer ${ALL_LIBS} test_library)
+
+add_executable(cubemap cubemap.cpp ${HEADER_FILES})
+target_link_libraries(cubemap ${ALL_LIBS} test_library)
+
+add_executable(debug debug.cpp ${HEADER_FILES})
+target_link_libraries(debug ${ALL_LIBS} test_library)
 
 file(COPY "./shader" DESTINATION  "./Debug")
 file(COPY "./texture" DESTINATION  "./Debug")

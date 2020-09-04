@@ -53,20 +53,25 @@ int main()
   }
   glfwMakeContextCurrent(window);
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-
   // INIT GLAD
   if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
   {
     std::cout << "Failed to initialize GLAD" << std::endl;
     return -1;
   }
-
+  // projection
+  glm::mat4 projection;
+  projection = glm::perspective(
+      glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+  auto camera = Camera(projection);
+  OrbitCamera orbit(camera);
+  GLFWInputHandler inputHandler(*window, orbit);
   // INIT OPEN GL
   glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
-  /*  glEnable(GL_BLEND); */
-  /*   glEnable(GL_CULL_FACE); */
-  /*   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glCullFace(GL_BACK); */
+  // configure global opengl state
+  // -----------------------------
+  glEnable(GL_DEPTH_TEST);
+  /*   glEnable(GL_BLEND); */
 
   auto renderer = std::make_unique<Renderer>();
   auto resourceManager = std::make_unique<ResourceManager>(*renderer);
@@ -74,7 +79,7 @@ int main()
   SpriteRenderer spriteRenderer = SpriteRenderer();
 
   std::shared_ptr<Shader> meshShader(
-      new Shader("./shader/vLight.glsl", "./shader/fKernel.glsl"));
+      new Shader("./shader/vLight.glsl", "./shader/fModel.glsl"));
 
   std::shared_ptr<Shader> shader(
       new Shader("./shader/vSprite.glsl", "./shader/fSprite.glsl"));
@@ -82,22 +87,37 @@ int main()
   std::shared_ptr<Shader> screenShader(
       new Shader("./shader/vframe_buffer.glsl", "./shader/fframe_buffer.glsl"));
 
+  std::shared_ptr<Shader> skyBoxShader(
+      new Shader("./shader/vSkybox.glsl", "./shader/fSkybox.glsl"));
+
   std::vector<Image> images = {Image("./texture/grass.png", true),
                                Image("./texture/container.jpg", true),
-                               Image("./texture/wall.jpg", true)};
+                               Image("./texture/wall.jpg", true),
+                               Image("./texture/container2.png", false),
+                               Image("./texture/container2_specular.png", false)};
 
+  std::vector<Image> skyBox = {Image("./texture/skybox/right.jpg"),
+                               Image("./texture/skybox/left.jpg"),
+                               Image("./texture/skybox/top.jpg"),
+                               Image("./texture/skybox/bottom.jpg"),
+                               Image("./texture/skybox/front.jpg"),
+                               Image("./texture/skybox/back.jpg")};
   Material mat = Material(shader);
   Material screenMat = Material(screenShader);
   Material meshMat = Material(meshShader);
   Material wallMath = Material(meshShader);
-
+  Texture skyBoxTexture = resourceManager->loadTextureCube(skyBox);
   for (auto image : images)
   {
     // load image
     Texture texture = resourceManager->loadTexture2D(image);
     texture.type = TextureType::Diffuse;
   }
-  mat.textures.push_back(resourceManager->getTexture("./texture/grass.png"));
+
+  mat.textures.push_back(resourceManager->getTexture("./texture/container2.png"));
+  auto diffuse = resourceManager->getTexture("./texture/container2_specular.png");
+  diffuse.type = TextureType::Diffuse;
+  mat.textures.push_back(diffuse);
   meshMat.textures.push_back(
       resourceManager->getTexture("./texture/container.jpg"));
   wallMath.textures.push_back(
@@ -108,11 +128,6 @@ int main()
   resourceManager->addMaterial(wallMath);
 
   MeshRenderer render;
-  // projection
-  glm::mat4 projection;
-  projection = glm::perspective(
-      glm::radians(30.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 200.0f);
-  auto camera = Camera(projection);
 
   Light light = Light();
   light.Position = glm::vec3(0.0f, 0.2f, 1.0f);
@@ -120,73 +135,29 @@ int main()
   light.Diffuse = glm::vec3(1.0f, 1.0f, 1.0f);
   light.Specular = glm::vec3(1.0f, 1.0f, 1.0f);
   light.Direction = glm::vec3(0.0f, 0.0f, 1.0f);
-
-  // Create Framebuffer
-  unsigned int fbo;
-  glGenFramebuffers(1, &fbo);
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-  // Create a texture
-  Texture texture;
-  glGenTextures(1, &texture.id);
-  glBindTexture(GL_TEXTURE_2D, texture.id);
-
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB,
-               GL_UNSIGNED_BYTE, NULL);
-
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         texture.id, 0);
-  // create a renderbuffer object for depth and stencil attachment (we won't be
-  // sampling these)
-  unsigned int rbo;
-  glGenRenderbuffers(1, &rbo);
-  glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCR_WIDTH,
-                        SCR_HEIGHT); // use a single renderbuffer object for
-                                     // both a depth AND stencil buffer.
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
-                            GL_RENDERBUFFER, rbo); // now actually attach it
-  // now that we actually created the framebuffer and added all attachments we
-  // want to check if it is actually complete now
-  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-    std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!"
-              << std::endl;
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-  screenMat.textures.push_back(texture);
-  resourceManager->addMaterial(screenMat);
-
-  auto screen = createPlane();
-  renderer->createBuffer(screen);
-
+  /* 
   auto floor = modelLoader.loadModel("./texture/untitled.glb");
   for (auto &mesh : floor.meshes)
   {
     renderer->createBuffer(mesh);
-  }
+  } 
   auto floorTransform = glm::mat4(1.0f);
   floorTransform = glm::translate(floorTransform, glm::vec3(0.0f, 0.0f, 0.0f));
-  /*   floorTransform = glm::scale(floorTransform,
-   * glm::vec3(20.0f, 1.0f, 20.0f)); */
-  /*  floorTransform = glm::translate(floorTransform, glm::vec3(0.0f, 0.0f,
-   * 0.0f)); */
-  /*   float angle = -180.0f;
-    floorTransform = glm::rotate(floorTransform, glm::radians(angle),
-                                 glm::vec3(1.0f, 0.0f, 0.0f));
-    floorTransform = glm::scale(floorTransform, glm::vec3(10.0f)); */
-
+  */
   auto container = createCube();
   renderer->createBuffer(container);
 
+  auto skyBoxMesh = createSkybox();
+
+  renderer->createBuffer(skyBoxMesh);
+
+  camera.Position = glm::vec3(0.0f, 1.0f, 5.0f);
   while (!glfwWindowShouldClose(window))
   {
     double currentFrame = glfwGetTime();
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
+    inputHandler.update(deltaTime);
     // input
     // -----
     processInput(window);
@@ -195,33 +166,10 @@ int main()
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    camera.Position = glm::vec3(-10.0f, 10.0f, 15.0f);
-    camera.Target = glm::vec3(5.0f, 0.0f, 0.0f);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glEnable(GL_DEPTH_TEST);
-
     render.useLight(*meshShader, light, camera);
 
-    render.render(camera, floor, *meshShader, *resourceManager, floorTransform);
-
-    /*  render.render(camera, container, meshMat, glm::mat4(1.0f));
-
-     render.render(
-         camera, container, meshMat,
-         glm::translate(glm::mat4(1.0f), glm::vec3(-0.5f, 0.0f, -0.5f)));
-  */
-    /* spriteRenderer.render(camera, sprites, 0,
-       resourceManager->getMaterials(), vegetation); */
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0); // back to default
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    render.render(camera, screen, screenMat,
-                  glm::scale(glm::mat4(1.0f), glm::vec3(2.0f)));
+    render.render(camera, container, *meshShader, mat, glm::mat4(1.0));
+    render.renderSkyBox(camera, skyBoxMesh, *skyBoxShader, skyBoxTexture);
 
     glfwSwapBuffers(window);
     glfwPollEvents();
